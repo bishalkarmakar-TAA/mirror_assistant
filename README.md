@@ -1,1 +1,1 @@
-This is the learning of set-up of supabase 
+Mirror assistant chatbot [Professional's side]
