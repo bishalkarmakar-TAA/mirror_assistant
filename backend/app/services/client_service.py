@@ -1,6 +1,7 @@
 from uuid import UUID
 from fastapi import HTTPException
-from ..core.constants import ErrorMessages
+from app.core.constants import ErrorMessages
+from app.db.repositories.client_repository import ClientRepository
 from supabase import Client
 
 class ClientService:
@@ -11,11 +12,7 @@ class ClientService:
         date/time, and status.
         """
         # Fetching bookings joined with slot details for time/date
-        result = db.table("bookings")\
-            .select("*, availability_slots(date, start_time, end_time)")\
-            .eq("client_id", str(client_id))\
-            .order("date", desc=True)\
-            .execute()
+        result = ClientRepository.get_client_bookings(db, client_id)
         
         if not result.data:
             return {"message": "No bookings found for this client.", "entries": []}
@@ -32,10 +29,7 @@ class ClientService:
         Supports the Chatbot's need to find a client ID from a natural language name.
         """
         # Using 'ilike' for case-insensitive partial matching (fuzzy search)
-        result = db.table("clients")\
-            .select("client_id, client_name")\
-            .ilike("client_name", f"%{name}%")\
-            .execute()
+        result = ClientRepository.search_clients_by_name(db, name)
         
         if not result.data:
             raise HTTPException(

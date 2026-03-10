@@ -1,50 +1,42 @@
-from uuid import UUID
-from fastapi import HTTPException
+from app.schemas.chatbot import ChatRequest, ChatResponse
+from app.agents.workflow_manager import workflow_manager
 from supabase import Client
+import logging
 
-class ClientService:
-    @staticmethod
-    def get_client_bookings(db: Client, client_id: UUID):
-        """
-        Requirement 7.8: Output shall include upcoming and past bookings, 
-        date/time, and status.
-        """
-        # Fetching bookings joined with slot details for time/date
-        result = db.table("bookings")\
-            .select("*, availability_slots(date, start_time, end_time)")\
-            .eq("client_id", str(client_id))\
-            .order("date", desc=True)\
-            .execute()
-        
-        if not result.data:
-            return {"message": "No bookings found for this client.", "entries": []}
-            
-        return {
-            "client_id": str(client_id),
-            "entries": result.data
-        }
+# Initialize logger for tracking AI decisions
+logger = logging.getLogger(__name__)
 
+class ChatbotService:
     @staticmethod
-    def get_client_by_name(db: Client, name: str):
+    async def process_message(db: Client, request: ChatRequest) -> ChatResponse:
         """
-        Requirement 13: Error handling for 'No client matched that name'.
-        Supports the Chatbot's need to find a client ID from a natural language name.
+        Requirement 5 & 8: Main entry point for the conversational interface.
+        This service delegates the natural language interpretation to the 
+        Workflow Manager and returns the structured response.
         """
-        # Using 'ilike' for case-insensitive partial matching (fuzzy search)
-        result = db.table("clients")\
-            .select("client_id, client_name")\
-            .ilike("client_name", f"%{name}%")\
-            .execute()
-        
-        if not result.data:
-            raise HTTPException(
-                status_code=404, 
-                detail=f"No client matched the name '{name}'. Please try a different name."
+        try:
+            # 1. Logic Delegation:
+            # We send the raw message and professional context to the AI Agent.
+            # The agent will use tool calling to hit your other services (Booking/Schedule).
+            ai_output = await workflow_manager.handle_message(
+                db=db, 
+                message=request.message, 
+                professional_id=request.professional_id
             )
-            
-        # If multiple matches found, the Chatbot logic (Requirement 8.3) 
-        # will ask for clarification.
-        return {
-            "count": len(result.data),
-            "clients": result.data
-        }
+
+            # 2. Response Construction:
+            # Matches the ChatResponse schema: reply, intent, and action_suggested flag.
+            return ChatResponse(
+                reply=ai_output.get("reply", "I'm sorry, I couldn't process that request."),
+                intent=ai_output.get("intent", "unknown"),
+                action_suggested=ai_output.get("action_suggested", False)
+            )
+
+        except Exception as e:
+            # Requirement 13: Action-oriented error handling
+            logger.error(f"Chatbot Error: {str(e)}")
+            return ChatResponse(
+                reply="I encountered a technical issue while processing your request. Please try again or check your schedule manually.",
+                intent="error",
+                action_suggested=False
+            )
