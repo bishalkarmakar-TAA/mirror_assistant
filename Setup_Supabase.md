@@ -121,39 +121,39 @@ This creates: `supabase/migrations/<timestamp>_create_core_tables.sql`
 Open that file and paste the following SQL:
 
 ```sql
--- 1. Create Professionals table
+-- 1. Professionals table
 CREATE TABLE professionals (
-    professional_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    full_name TEXT,
-    email TEXT
+    professional_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    full_name TEXT,
+    email TEXT
 );
 
--- 2. Create Clients table
+-- 2. Clients table
 CREATE TABLE clients (
-    client_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    client_name TEXT NOT NULL
+    client_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    client_name TEXT NOT NULL
 );
 
--- 3. Create Availability table
+-- 3. Availability Slots
 CREATE TABLE availability_slots (
-    slot_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    professional_id UUID REFERENCES professionals(professional_id),
-    date DATE NOT NULL,
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
-    status TEXT DEFAULT 'available'
+    slot_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    professional_id UUID REFERENCES professionals(professional_id),
+    date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    status TEXT DEFAULT 'available'
 );
 
--- 4. Create Bookings table
+-- 4. Bookings
 CREATE TABLE bookings (
-    booking_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    professional_id UUID REFERENCES professionals(professional_id),
-    client_id UUID REFERENCES clients(client_id),
-    slot_id UUID REFERENCES availability_slots(slot_id),
-    date DATE NOT NULL,
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
-    status TEXT DEFAULT 'scheduled'
+    booking_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    professional_id UUID REFERENCES professionals(professional_id),
+    client_id UUID REFERENCES clients(client_id),
+    slot_id UUID REFERENCES availability_slots(slot_id),
+    date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    status TEXT DEFAULT 'scheduled'
 );
 ```
 
@@ -170,7 +170,7 @@ This re-creates the database and runs all migrations from scratch.
 > **Note on Windows:** A `502` error at the end of `db reset` is expected — it's just the internal services restarting. As long as the migration line says `Applying migration ...` without a SQL error, it worked.
 
 Verify in Studio at **http://127.0.0.1:54323** → Table Editor.  
-You should see: `clients`, `availability_slots`, `bookings`.
+You should see: `professionals`, `clients`, `availability_slots`, `bookings`.
 
 ---
 
@@ -261,10 +261,11 @@ supabase status
 
 | Table | Primary Key | Key Relations |
 |---|---|---|
+| `professionals` | `professional_id` | — |
 | `clients` | `client_id` | — |
-| `availability_slots` | `slot_id` | `professional_id` (external) |
-| `bookings` | `booking_id` | `client_id → clients`, `slot_id → availability_slots` |
+| `availability_slots` | `slot_id` | `professional_id → professionals` |
+| `bookings` | `booking_id` | `professional_id → professionals`, `client_id → clients`, `slot_id → availability_slots` |
 
 ---
 
-*Setup complete*
+*Setup complete.*
