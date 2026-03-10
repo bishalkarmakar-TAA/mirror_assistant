@@ -20,7 +20,7 @@ from schemas.booking import BookingCreate, BookingUpdate
 logger = logging.getLogger(__name__)
 
 # ============================================================================
-# Tool Schemas for Production (Aligned with Todo.md Section 7)
+# Tool Schemas for Production
 # ============================================================================
 PRODUCTION_TOOLS = [
     {
