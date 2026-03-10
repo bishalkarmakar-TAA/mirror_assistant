@@ -1,9 +1,7 @@
 import asyncio, threading, os
 from groq import AsyncGroq
-from dotenv import load_dotenv
 from pathlib import Path
-
-load_dotenv(override=True)
+from core.config import GROQ_API_KEY
 
 class Singleton(type):
     _instances = {}
@@ -34,7 +32,7 @@ class GroqClient(metaclass = Singleton):
         
         async with self.__init_lock:
             if self._client is None:
-                api_key = os.getenv("GROQ_API_KEY")
+                api_key = GROQ_API_KEY
                 if not api_key:
                     raise RuntimeError("GROQ_API_KEY not set")
 
