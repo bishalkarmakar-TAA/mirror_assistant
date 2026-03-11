@@ -195,15 +195,20 @@ class WorkflowManager:
             logger.warning(f"Tool execution failed ({function_name}): {str(e)}")
             return json.dumps({"error": str(e)})
 
-    async def handle_message(self, db: Client, message: str, professional_id: UUID) -> Dict[str, Any]:
+    async def handle_message(self, db: Client, message: str, professional_id: UUID, chat_history: List[Dict[str, str]] = None) -> Dict[str, Any]:
         """
         Main entry point for ChatbotService.
         Executes the Agentic Loop with Multi-Tool Support.
         """
         client = await groqclient.get_client()
         
-        messages = [{"role": "system", "content": self._get_system_prompt()}, {"role": "user", "content": message}]
-        
+        messages = [{"role": "system", "content": self._get_system_prompt()}]    
+
+        if chat_history:
+            messages.extend(chat_history)
+
+        messages.append({"role": "user", "content": message})
+
         # Generate the tool routing map once per request
         tool_map = self._get_tool_map(db, professional_id)
         
