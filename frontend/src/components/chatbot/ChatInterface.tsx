@@ -72,6 +72,102 @@ export const ChatInterface: React.FC = () => {
     sendMessage(option);
   };
 
+  const renderTableAsCards = (tableText: string, key: string) => {
+    const lines = tableText.trim().split('\n');
+    if (lines.length < 3) return renderText(tableText, key);
+
+    const rawHeaders = lines[0].split('|').map(h => h.trim()).filter(Boolean);
+    const rows = lines.slice(2).map(row => {
+      const cells = row.split('|').map(c => c.trim()).filter(Boolean);
+      const rowObj: any = {};
+      rawHeaders.forEach((header, i) => {
+        rowObj[header.toLowerCase()] = cells[i];
+      });
+      return rowObj;
+    });
+
+    return (
+      <div key={key} className="grid grid-cols-1 gap-4 my-4 ml-11">
+        {rows.map((row, i) => {
+          const start = row['start'] || row['time'] || '';
+          const end = row['end'] || '';
+          const client = row['client'] || row['name'] || '';
+          const status = row['status'] || '';
+          const id = row['slot id'] || row['booking id'] || row['id'] || 'N/A';
+          const isBooking = !!row['booking id'] || !!row['client'];
+
+          return (
+            <div key={i} className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden max-w-sm">
+              <div className="p-6">
+                <div className="text-lg font-semibold text-gray-800">
+                  {start}{end ? ` – ${end}` : ''} {client ? `- Session with ${client}` : ''}
+                </div>
+                <div className="flex items-center justify-between mt-3">
+                  <div className="text-xs text-gray-400">
+                    ID: <span className="font-mono">{id}</span>
+                  </div>
+                  {status && (
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      status.toLowerCase() === 'available' ? 'bg-green-100 text-green-700' : 
+                      status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {status}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="bg-white px-6 py-4 border-t border-gray-50 flex justify-around">
+                <button 
+                  onClick={() => sendMessage(`Edit ${isBooking ? 'booking' : 'slot'} ${id}`)}
+                  className="text-sm font-semibold text-gray-700 hover:text-blue-600 transition-colors"
+                >
+                  Edit {isBooking ? 'Booking' : 'Slot'}
+                </button>
+                <div className="w-[1px] h-4 bg-gray-100 self-center"></div>
+                <button 
+                  onClick={() => sendMessage(`Delete ${isBooking ? 'booking' : 'slot'} ${id}`)}
+                  className="text-sm font-semibold text-red-500 hover:text-red-700 transition-colors"
+                >
+                  Delete {isBooking ? 'Booking' : 'Slot'}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderText = (text: string, baseKey: string) => {
+    const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
+    return parts.map((part, index) => {
+      const key = `${baseKey}-${index}`;
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={key} className="font-bold text-gray-900">{part.slice(2, -2)}</strong>;
+      }
+      if (part.startsWith('`') && part.endsWith('`')) {
+        return <code key={key} className="bg-gray-100 px-1.5 py-0.5 rounded text-blue-600 font-mono text-xs border border-gray-200">{part.slice(1, -1)}</code>;
+      }
+      return part;
+    });
+  };
+
+  const renderContent = (content: string, messageIndex: number) => {
+    // Detect markdown tables
+    if (content.includes('|') && content.includes('---')) {
+      // Split content into text and table parts
+      const parts = content.split(/(\n?\|.*\|\n(?:\|.*\|\n?)*)/g);
+      return parts.map((part, partIndex) => {
+        const key = `msg-${messageIndex}-part-${partIndex}`;
+        if (part.trim().startsWith('|') && part.includes('---')) {
+          return renderTableAsCards(part, key);
+        }
+        return <span key={key}>{renderText(part, key)}</span>;
+      });
+    }
+    return renderText(content, `msg-${messageIndex}`);
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] bg-white max-w-5xl mx-auto w-full p-6 relative">
       
@@ -96,7 +192,7 @@ export const ChatInterface: React.FC = () => {
               </div>
               <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${msg.role === 'user' ? 'bg-gray-100 text-gray-800' : 'text-gray-800'
                 }`}>
-                {msg.content}
+                {renderContent(msg.content, index)}
               </div>
             </div>
 
