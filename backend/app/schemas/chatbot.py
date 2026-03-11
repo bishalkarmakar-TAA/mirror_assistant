@@ -9,6 +9,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     professional_id: UUID # Changed to UUID for industry consistency
+    session_id: str
     history: Optional[List[ChatMessage]] = []
 
 class ChatResponse(BaseModel):
