@@ -4,3 +4,5 @@ __pycache__/**
 supabase/**
 Todo.md
 **/__pycache__/**
+frontend\node_modules
+API_docs.md
