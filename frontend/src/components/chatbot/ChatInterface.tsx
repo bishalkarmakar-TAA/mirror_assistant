@@ -9,6 +9,7 @@ export const ChatInterface: React.FC = () => {
   const { messages, isLoading, error, sendMessage, setMessages, startNewChat } = useChat();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { professionalName } = useAppContext();
 
   const getInitials = (name: string) => {
@@ -25,6 +26,18 @@ export const ChatInterface: React.FC = () => {
 
   useEffect(() => {
     scrollToBottom();
+  }, [messages, isLoading]);
+
+  // Auto-focus input on mount
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  // Re-focus input after each message exchange or when loading finishes
+  useEffect(() => {
+    if (!isLoading) {
+      inputRef.current?.focus();
+    }
   }, [messages, isLoading]);
 
   // Initial greeting
@@ -45,6 +58,7 @@ export const ChatInterface: React.FC = () => {
 
     const currentInput = input;
     setInput('');
+    inputRef.current?.focus();
     await sendMessage(currentInput);
   };
 
@@ -249,6 +263,7 @@ export const ChatInterface: React.FC = () => {
             🎤
           </button>
           <input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
