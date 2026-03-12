@@ -2,9 +2,9 @@ import pytest
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 from fastapi import HTTPException
-from app.services.booking_service import BookingService
-from app.schemas.booking import CreateBookingRequest
-from app.core.constants import SlotStatus, BookingStatus
+from services.booking_service import BookingService
+from schemas.booking import CreateBookingRequest
+from core.constants import SlotStatus, BookingStatus
 
 @pytest.fixture
 def mock_db():
