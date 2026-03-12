@@ -133,7 +133,7 @@ PRODUCTION_TOOLS = [
 class WorkflowManager:
     def __init__(self):
         self.model = MODEL_NAME
-        self.max_iterations = 5
+        self.max_iterations = 10
 
     def _get_system_prompt(self) -> str:
         return (
