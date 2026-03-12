@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from uuid import UUID
 from pydantic import BaseModel
 
@@ -16,3 +16,4 @@ class ChatResponse(BaseModel):
     reply: str
     intent: Optional[str] = None
     action_suggested: Optional[bool] = False
+    metadata: Optional[Dict[str, Any]] = False
