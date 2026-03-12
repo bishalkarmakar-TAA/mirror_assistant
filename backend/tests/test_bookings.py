@@ -2,9 +2,9 @@ import pytest
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 from fastapi import HTTPException
-from services.booking_service import BookingService
-from schemas.booking import BookingCreate
-from core.constants import SlotStatus, BookingStatus
+from app.services.booking_service import BookingService
+from app.schemas.booking import CreateBookingRequest
+from app.core.constants import SlotStatus, BookingStatus
 
 @pytest.fixture
 def mock_db():
@@ -43,7 +43,7 @@ def test_booking_50_10_split_logic(mock_db, mock_repos):
     booking_repo.get_bookings_by_professional_and_date.return_value.data = []
     booking_repo.create_booking.return_value.data = [{"booking_id": "test-id"}]
 
-    booking_request = BookingCreate(
+    booking_request = CreateBookingRequest(
         slot_id=slot_id,
         professional_id=prof_id,
         client_id=uuid4(),
@@ -92,7 +92,7 @@ def test_booking_overlap_fail(mock_db, mock_repos):
         "status": BookingStatus.SCHEDULED
     }]
     
-    booking_request = BookingCreate(
+    booking_request = CreateBookingRequest(
         slot_id=uuid4(),
         professional_id=uuid4(),
         client_id=uuid4(),

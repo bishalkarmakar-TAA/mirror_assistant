@@ -1,6 +1,6 @@
 from uuid import UUID
 from fastapi import HTTPException
-from schemas.booking import BookingCreate, BookingUpdate
+from schemas.booking import CreateBookingRequest, UpdateBookingRequest
 from core.constants import ErrorMessages, SlotStatus, BookingStatus
 from db.repositories.booking_repository import BookingRepository
 from db.repositories.schedule_repository import ScheduleRepository
@@ -10,7 +10,7 @@ from supabase import Client
 
 class BookingService:
     @staticmethod
-    def create_booking(db: Client, booking: BookingCreate):
+    def create_booking(db: Client, booking: CreateBookingRequest):
         booking.start_time = booking.start_time[:5]
         booking.end_time = booking.end_time[:5]
         # 0. Past-Time Validation (Mandatory Rule)
@@ -111,7 +111,7 @@ class BookingService:
         }
 
     @staticmethod
-    def update_booking(db: Client, booking_id: UUID, booking: BookingUpdate):
+    def update_booking(db: Client, booking_id: UUID, booking: UpdateBookingRequest):
         update_data = booking.model_dump(mode="json", exclude_unset=True)
         result = BookingRepository.update_booking(db, str(booking_id), update_data)
         

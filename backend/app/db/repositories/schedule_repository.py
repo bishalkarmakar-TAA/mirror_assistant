@@ -18,7 +18,7 @@ class ScheduleRepository:
     @staticmethod
     def get_day_schedule(db: Client, professional_id: UUID, date_str: str):
         return db.table("availability_slots")\
-            .select("*, bookings(*)")\
+            .select("*, bookings(*, clients(client_name))")\
             .eq("professional_id", str(professional_id))\
             .eq("date", date_str)\
             .order("start_time")\

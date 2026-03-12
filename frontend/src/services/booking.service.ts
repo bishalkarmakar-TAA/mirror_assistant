@@ -1,8 +1,8 @@
 import { API_BASE_URL } from "@/lib/constants";
-import { Booking, BookingCreate, BookingUpdate } from "@/types/booking";
+import { Booking, CreateBookingRequest, UpdateBookingRequest } from "@/types/booking";
 
 export class BookingService {
-  static async createBooking(booking: BookingCreate): Promise<{ status: string, data: Booking }> {
+  static async createBooking(booking: CreateBookingRequest): Promise<{ status: string, data: Booking }> {
     const response = await fetch(`${API_BASE_URL}/bookings/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -12,7 +12,7 @@ export class BookingService {
     return response.json();
   }
 
-  static async updateBooking(bookingId: string, update: BookingUpdate): Promise<{ status: string, data: Booking }> {
+  static async updateBooking(bookingId: string, update: UpdateBookingRequest): Promise<{ status: string, data: Booking }> {
     const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },

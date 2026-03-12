@@ -1,9 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ScheduleService } from '@/services/schedule.service';
 import { AvailabilitySlot } from '@/types/schedule';
+import { Booking } from '@/types/booking';
 import { useAppContext } from '@/context/app-context';
+
+type SlotWithBookings = AvailabilitySlot & { bookings?: (Booking & { clients?: { client_name: string } })[] };
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; dot: string; label: string }> = {
   available:  { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-400', label: 'Available'  },
@@ -16,192 +19,317 @@ const fmt = (t: string) => t.substring(0, 5);
 
 const todayISO = () => new Date().toISOString().split('T')[0];
 
-const displayDate = (iso: string) => {
-  const [y, m, d] = iso.split('-');
-  return `${d} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]} ${y}`;
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+const getWeekStart = (isoDate: string) => {
+  const date = new Date(isoDate);
+  const day = date.getDay(); // 0 = Sun, 1 = Mon ...
+  const diffToMonday = (day === 0 ? -6 : 1) - day;
+  const monday = new Date(date);
+  monday.setDate(date.getDate() + diffToMonday);
+  return monday.toISOString().split('T')[0];
+};
+
+const addDays = (isoDate: string, days: number) => {
+  const d = new Date(isoDate);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+};
+
+const displayShort = (iso: string) => {
+  const [_, m, d] = iso.split('-');
+  return `${d}/${m}`;
+};
+
+const displayRange = (startIso: string) => {
+  const start = new Date(startIso);
+  const end = new Date(startIso);
+  end.setDate(end.getDate() + 6);
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
+  return `${start.toLocaleDateString(undefined, opts)} – ${end.toLocaleDateString(undefined, opts)}`;
 };
 
 export default function SchedulesPage() {
-  const [slots, setSlots]       = useState<AvailabilitySlot[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [date, setDate]         = useState(todayISO);
-  const { professionalId }      = useAppContext();
+  const { professionalId } = useAppContext();
 
-  const fetchSlots = useCallback(async () => {
+  const [anchorDate, setAnchorDate] = useState(todayISO);
+  const [weekData, setWeekData] = useState<Record<string, SlotWithBookings[]>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  const weekStart = useMemo(() => getWeekStart(anchorDate), [anchorDate]);
+  const weekDays = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
+    [weekStart]
+  );
+
+  const fetchWeek = useCallback(async () => {
+    if (!professionalId) return;
     setIsLoading(true);
     try {
-      const data = await ScheduleService.getDaySchedule(professionalId, date);
-      setSlots(data.entries ?? []);
+      const results = await Promise.all(
+        weekDays.map(async (date) => {
+          const data = await ScheduleService.getDaySchedule(professionalId, date);
+          return { date, entries: (data.entries ?? []) as SlotWithBookings[] };
+        })
+      );
+      const byDate: Record<string, SlotWithBookings[]> = {};
+      results.forEach((r) => {
+        byDate[r.date] = r.entries;
+      });
+      setWeekData(byDate);
     } catch (err) {
-      console.error('Failed to fetch slots:', err);
-      setSlots([]);
+      console.error('Failed to fetch weekly schedule:', err);
+      setWeekData({});
     } finally {
       setIsLoading(false);
     }
-  }, [professionalId, date]);
+  }, [professionalId, weekDays]);
 
-  useEffect(() => { fetchSlots(); }, [fetchSlots]);
+  useEffect(() => {
+    fetchWeek();
+  }, [fetchWeek]);
 
-  const available = slots.filter(s => s.status === 'available').length;
-  const booked    = slots.filter(s => s.status === 'booked').length;
+  const openDaysCount = weekDays.reduce((acc, d) => {
+    const daySlots = weekData[d] ?? [];
+    const hasAvailable = daySlots.some((s) => s.status === 'available');
+    return acc + (hasAvailable ? 1 : 0);
+  }, 0);
+
+  const bookedCount = weekDays.reduce((acc, d) => {
+    const daySlots = weekData[d] ?? [];
+    return acc + daySlots.filter((s) => s.status === 'booked').length;
+  }, 0);
+
+  const selectedBookings =
+    selectedDate && weekData[selectedDate]
+      ? (weekData[selectedDate]
+          .flatMap((slot) =>
+            (slot.bookings as SlotWithBookings['bookings']) ?? []
+          )
+          .filter((b) => b.status === 'scheduled' || b.status === 'rescheduled')
+          .sort((a, b) =>
+            a.start_time.localeCompare(b.start_time)
+          )) as Booking[]
+      : [];
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-4xl mx-auto">
-
-        {/* ── Page header ── */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Schedules</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage your availability and view upcoming slots.</p>
-        </div>
-
-        {/* ── Toolbar ── */}
-        <div className="flex items-center justify-between mb-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Weekly schedule</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              View open slots from Monday to Sunday and drill into bookings for a specific day.
+            </p>
+          </div>
           <div className="flex items-center gap-3">
-            {/* Date picker — styled with explicit white bg so it's always visible */}
-            <div className="relative">
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="
-                  bg-white text-gray-800 text-sm font-medium
-                  border border-gray-200 rounded-xl
-                  px-4 py-2.5 pr-10
-                  shadow-sm
-                  focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent
-                  cursor-pointer
-                  appearance-none
-                "
-              />
-              {/* Calendar icon overlay */}
-              <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
+            <div className="flex items-center bg-white rounded-xl border border-gray-200 shadow-sm">
+              <button
+                onClick={() => setAnchorDate(addDays(weekStart, -7))}
+                className="px-3 py-2 text-gray-500 hover:text-gray-800 hover:bg-gray-50 rounded-l-xl"
+              >
+                ‹
+              </button>
+              <div className="px-4 py-2 text-sm font-medium text-gray-800 border-x border-gray-100">
+                {displayRange(weekStart)}
               </div>
+              <button
+                onClick={() => setAnchorDate(addDays(weekStart, 7))}
+                className="px-3 py-2 text-gray-500 hover:text-gray-800 hover:bg-gray-50 rounded-r-xl"
+              >
+                ›
+              </button>
             </div>
-
             <button
-              onClick={fetchSlots}
-              className="flex items-center gap-2 bg-white text-gray-600 text-sm font-medium border border-gray-200 rounded-xl px-4 py-2.5 shadow-sm hover:bg-gray-50 transition-colors"
+              onClick={() => setAnchorDate(todayISO())}
+              className="text-xs font-semibold text-green-600 hover:text-green-700 px-3 py-2 rounded-lg hover:bg-green-50"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-              </svg>
-              Refresh
+              Today
             </button>
           </div>
-
-          <button className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-xl px-5 py-2.5 shadow-sm transition-colors">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            New Slot
-          </button>
         </div>
 
-        {/* ── Stat chips ── */}
-        {!isLoading && slots.length > 0 && (
+        {!isLoading && (
           <div className="flex gap-3 mb-5">
             <div className="bg-white border border-gray-200 rounded-xl px-4 py-2.5 shadow-sm flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-gray-400 inline-block" />
-              <span className="text-sm text-gray-600 font-medium">{slots.length} total</span>
+              <span className="text-sm text-gray-600 font-medium">
+                {openDaysCount} day{openDaysCount === 1 ? '' : 's'} with open slots
+              </span>
             </div>
-            {available > 0 && (
-              <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2.5 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-                <span className="text-sm text-emerald-700 font-medium">{available} available</span>
-              </div>
-            )}
-            {booked > 0 && (
+            {bookedCount > 0 && (
               <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
-                <span className="text-sm text-blue-700 font-medium">{booked} booked</span>
+                <span className="text-sm text-blue-700 font-medium">
+                  {bookedCount} booked slot{bookedCount === 1 ? '' : 's'} this week
+                </span>
               </div>
             )}
           </div>
         )}
 
-        {/* ── Table card ── */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          {/* Card header */}
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <span className="text-sm font-semibold text-gray-700">{displayDate(date)}</span>
-            {isLoading && (
-              <span className="text-xs text-gray-400 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce inline-block" style={{animationDelay:'0ms'}}/>
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce inline-block" style={{animationDelay:'150ms'}}/>
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce inline-block" style={{animationDelay:'300ms'}}/>
-              </span>
-            )}
-          </div>
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+          {isLoading ? (
+            <div className="flex justify-center items-center py-16">
+              <div className="flex space-x-2">
+                <span className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" />
+                <span className="w-2 h-2 bg-gray-300 rounded-full animate-bounce [animation-delay:120ms]" />
+                <span className="w-2 h-2 bg-gray-300 rounded-full animate-bounce [animation-delay:240ms]" />
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-7 gap-3">
+              {weekDays.map((dateIso, index) => {
+                const daySlots = weekData[dateIso] ?? [];
+                const available = daySlots.filter((s) => s.status === 'available');
+                const booked = daySlots.filter((s) => s.status === 'booked');
+                const hasAnything = daySlots.length > 0;
+                const isToday = dateIso === todayISO();
 
-          <table className="w-full text-left">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Time</th>
-                <th className="px-6 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Status</th>
-                <th className="px-6 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-widest text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {isLoading ? (
-                // Skeleton rows
-                [1,2,3].map(i => (
-                  <tr key={i}>
-                    <td className="px-6 py-4"><div className="h-4 w-28 bg-gray-100 rounded animate-pulse" /></td>
-                    <td className="px-6 py-4"><div className="h-5 w-20 bg-gray-100 rounded-full animate-pulse" /></td>
-                    <td className="px-6 py-4 text-right"><div className="h-4 w-24 bg-gray-100 rounded animate-pulse ml-auto" /></td>
-                  </tr>
-                ))
-              ) : slots.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="px-6 py-16 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
-                        <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                      </svg>
-                      <p className="text-sm text-gray-400">No slots for this date</p>
+                return (
+                  <button
+                    key={dateIso}
+                    type="button"
+                    onClick={() => hasAnything && setSelectedDate(dateIso)}
+                    className={`flex flex-col rounded-xl border text-left px-3 py-2.5 min-h-[120px] transition-all ${
+                      hasAnything
+                        ? 'bg-slate-900/95 border-slate-800 hover:border-emerald-400 hover:shadow-lg hover:shadow-emerald-500/10'
+                        : 'bg-gray-50 border-dashed border-gray-200 hover:border-gray-300'
+                    } ${hasAnything ? 'cursor-pointer' : 'cursor-default'}`}
+                  >
+                    <div className="flex items-baseline justify-between mb-2">
+                      <div className="flex flex-col">
+                        <span
+                          className={`text-xs font-semibold tracking-wide uppercase ${
+                            hasAnything ? 'text-slate-200' : 'text-gray-400'
+                          }`}
+                        >
+                          {WEEKDAYS[index]}
+                        </span>
+                        <span
+                          className={`text-sm font-semibold ${
+                            hasAnything ? 'text-white' : 'text-gray-700'
+                          }`}
+                        >
+                          {displayShort(dateIso)}
+                        </span>
+                      </div>
+                      {isToday && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400">
+                          Today
+                        </span>
+                      )}
                     </div>
-                  </td>
-                </tr>
-              ) : (
-                slots.map((slot) => {
-                  const cfg = STATUS_CONFIG[slot.status] ?? STATUS_CONFIG['available'];
-                  return (
-                    <tr key={slot.slot_id} className="hover:bg-gray-50 transition-colors group">
-                      <td className="px-6 py-4">
-                        <span className="text-sm font-semibold text-gray-800 tabular-nums">
-                          {fmt(slot.start_time)} – {fmt(slot.end_time)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${cfg.bg} ${cfg.text}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                          {cfg.label}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button className="text-xs font-semibold text-gray-400 hover:text-gray-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-gray-100 mr-1">
-                          Edit
-                        </button>
-                        <button className="text-xs font-semibold text-red-400 hover:text-red-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50">
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+
+                    {hasAnything ? (
+                      <div className="mt-1 space-y-1.5">
+                        {available.slice(0, 3).map((slot) => (
+                          <div
+                            key={slot.slot_id}
+                            className="flex items-center justify-between rounded-lg bg-slate-800/80 px-2 py-1 text-[11px]"
+                          >
+                            <span className="font-mono text-slate-100">
+                              {fmt(slot.start_time)}–{fmt(slot.end_time)}
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-emerald-300">
+                              <span className="w-1 h-1 rounded-full bg-emerald-400" />
+                              Open
+                            </span>
+                          </div>
+                        ))}
+                        {available.length > 3 && (
+                          <p className="text-[10px] text-slate-400 mt-0.5">
+                            +{available.length - 3} more open slot
+                            {available.length - 3 === 1 ? '' : 's'}
+                          </p>
+                        )}
+                        {booked.length > 0 && (
+                          <p className="text-[10px] text-blue-200/90 mt-1">
+                            {booked.length} booked slot{booked.length === 1 ? '' : 's'}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="mt-4 text-[11px] text-gray-400">
+                        No slots
+                      </p>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
+        {selectedDate && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 max-h-[80vh] flex flex-col">
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-900">
+                    Bookings for {selectedDate}
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Client name, time, note and created date.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDate(null)}
+                  className="text-gray-400 hover:text-gray-700 rounded-full p-1 hover:bg-gray-100"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="px-6 py-4 overflow-y-auto">
+                {selectedBookings.length === 0 ? (
+                  <p className="text-sm text-gray-400">
+                    No bookings for this day yet.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedBookings.map((booking) => (
+                      <div
+                        key={booking.booking_id}
+                        className="border border-gray-100 rounded-xl p-3 bg-gray-50"
+                      >
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-sm font-semibold text-gray-900">
+                            {booking.clients?.client_name ?? 'Unknown client'}
+                          </span>
+                          <span className="text-xs font-mono text-gray-500">
+                            {fmt(booking.start_time)}–{fmt(booking.end_time)}
+                          </span>
+                        </div>
+                        {booking.booking_note && (
+                          <p className="mt-1 text-xs text-gray-600">
+                            {booking.booking_note}
+                          </p>
+                        )}
+                        {booking.created_at && (
+                          <p className="mt-1 text-[10px] text-gray-400">
+                            Created at{' '}
+                            {new Date(booking.created_at).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="px-6 py-3 border-t border-gray-100 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSelectedDate(null)}
+                  className="text-xs font-semibold text-gray-600 hover:text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-100"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

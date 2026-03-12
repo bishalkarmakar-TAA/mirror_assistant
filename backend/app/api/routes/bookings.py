@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
 import logging
-from schemas.booking import BookingCreate, BookingUpdate
+from schemas.booking import CreateBookingRequest, UpdateBookingRequest
 from services.booking_service import BookingService
 from api.dependencies import get_supabase_client
 from supabase import Client
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/schedule/bookings", tags=["Bookings"])
 
 # 12.4 Create Booking
 @router.post("/", response_model=dict)
-def create_booking(booking: BookingCreate, db: Client = Depends(get_supabase_client)):
+def create_booking(booking: CreateBookingRequest, db: Client = Depends(get_supabase_client)):
     """
     Creates a new booking. 
     Matches requirement: validation for slot availability and client existence.
@@ -33,7 +33,7 @@ def create_booking(booking: BookingCreate, db: Client = Depends(get_supabase_cli
 
 # 12.5 Update Booking
 @router.put("/{booking_id}", response_model=dict)
-def update_booking(booking_id: UUID, booking: BookingUpdate, db: Client = Depends(get_supabase_client)):
+def update_booking(booking_id: UUID, booking: UpdateBookingRequest, db: Client = Depends(get_supabase_client)):
     """
     Updates an existing booking.
     Matches requirement: validation for conflict or invalid identifiers.

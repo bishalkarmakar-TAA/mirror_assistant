@@ -5,7 +5,7 @@ from pydantic import BaseModel
 class ClientBase(BaseModel):
     client_name: str
 
-class ClientCreate(ClientBase):
+class CreateClientRequest(ClientBase):
     pass
 
 class Client(ClientBase):

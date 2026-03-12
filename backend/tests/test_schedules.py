@@ -2,9 +2,9 @@ import pytest
 from unittest.mock import MagicMock
 from uuid import uuid4
 from fastapi import HTTPException
-from services.schedule_service import ScheduleService
-from schemas.schedule import AvailabilitySlotCreate
-from core.constants import SlotStatus, ErrorMessages
+from app.services.schedule_service import ScheduleService
+from app.schemas.schedule import AvailabilitySlotCreate
+from app.core.constants import SlotStatus, ErrorMessages
 
 @pytest.fixture
 def mock_db():
