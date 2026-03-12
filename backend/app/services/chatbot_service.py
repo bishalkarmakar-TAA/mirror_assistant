@@ -15,7 +15,7 @@ class ChatbotService:
             message_clean = request.message.lower().strip()
 
             # 1. Define Synonym Groups
-            BOOKING_SYNONYMS = ["booking", "appointment", "session", "meeting", "reserve", "Book"]
+            BOOKING_SYNONYMS = ["booking", "appointment", "session", "meeting", "reserve", "book"]
             SLOT_SYNONYMS = ["slot", "availability", "open hours", "schedule window",]
 
             # 2. Check which group the user's message belongs to
