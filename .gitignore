@@ -6,3 +6,12 @@ Todo.md
 **/__pycache__/**
 frontend\node_modules
 API_docs.md
+# Python
+__pycache__/
+*.pyc
+
+# Mac
+.DS_Store
+
+# Node
+node_modules/
