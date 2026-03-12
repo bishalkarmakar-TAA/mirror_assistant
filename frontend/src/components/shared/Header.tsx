@@ -7,7 +7,7 @@ export const Header: React.FC = () => {
   const { professionalName, professionalRole } = useAppContext();
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-10">
+    <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-8 sticky top-0 z-10">
       <h1 className="text-xl font-semibold text-gray-800">Inbox</h1>
       <div className="flex items-center space-x-4">
         <button className="text-gray-500 hover:text-gray-700 relative">

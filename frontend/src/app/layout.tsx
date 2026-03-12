@@ -28,11 +28,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased flex bg-gray-50`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased flex bg-background`}
       >
         <AppProvider>
           <Sidebar />
-          <div className="flex-1 ml-64 min-h-screen">
+          <div className="flex-1 ml-64 min-h-screen flex flex-col">
             <Header />
             {children}
           </div>

@@ -111,7 +111,7 @@ export const ChatInterface: React.FC = () => {
           const isBooking = !!row['booking id'] || !!row['client'];
 
           return (
-            <div key={i} className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden max-w-sm">
+            <div key={i} className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow duration-300 overflow-hidden max-w-sm border-none">
               <div className="p-6">
                 <div className="text-lg font-semibold text-gray-800">
                   {start}{end ? ` – ${end}` : ''} {client ? `- Session with ${client}` : ''}
@@ -121,26 +121,25 @@ export const ChatInterface: React.FC = () => {
                     ID: <span className="font-mono">{id}</span>
                   </div>
                   {status && (
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      status.toLowerCase() === 'available' ? 'bg-green-100 text-green-700' : 
-                      status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
-                    }`}>
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${status.toLowerCase() === 'available' ? 'bg-green-100 text-green-700' :
+                        status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                      }`}>
                       {status}
                     </span>
                   )}
                 </div>
               </div>
               <div className="bg-white px-6 py-4 border-t border-gray-50 flex justify-around">
-                <button 
+                <button
                   onClick={() => sendMessage(`Edit ${isBooking ? 'booking' : 'slot'} ${id}`)}
-                  className="text-sm font-semibold text-gray-700 hover:text-blue-600 transition-colors"
+                  className="text-sm font-semibold text-gray-700 hover:text-blue-600 hover:scale-[1.05] active:scale-[0.95] transition-all duration-200"
                 >
                   Edit {isBooking ? 'Booking' : 'Slot'}
                 </button>
                 <div className="w-[1px] h-4 bg-gray-100 self-center"></div>
-                <button 
+                <button
                   onClick={() => sendMessage(`Delete ${isBooking ? 'booking' : 'slot'} ${id}`)}
-                  className="text-sm font-semibold text-red-500 hover:text-red-700 transition-colors"
+                  className="text-sm font-semibold text-red-500 hover:text-red-700 hover:scale-[1.05] active:scale-[0.95] transition-all duration-200"
                 >
                   Delete {isBooking ? 'Booking' : 'Slot'}
                 </button>
@@ -184,13 +183,16 @@ export const ChatInterface: React.FC = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] bg-white max-w-5xl mx-auto w-full p-6 relative">
-      
+
       {/* ADDED: A subtle header with a "New Chat" button */}
-      <div className="flex justify-between items-center px-4 pb-4 border-b border-gray-100 mb-4">
-        <h2 className="text-lg font-semibold text-gray-800">Mirror Assistant</h2>
-        <button 
+      <div className="flex justify-between items-center px-4 pb-4 border-b border-gray-100 mb-6">
+        <div className="flex items-center space-x-3">
+          <div className="w-2 h-6 bg-green-500 rounded-full"></div>
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight">Mirror Assistant</h2>
+        </div>
+        <button
           onClick={startNewChat}
-          className="text-sm text-gray-500 hover:text-blue-600 font-medium px-3 py-1 rounded-md hover:bg-blue-50 transition-colors"
+          className="text-xs font-semibold text-gray-500 hover:text-green-600 bg-gray-50 hover:bg-green-50 px-4 py-2 rounded-xl transition-all duration-200 border border-transparent hover:border-green-100 shadow-sm"
         >
           + New Chat
         </button>
@@ -200,11 +202,11 @@ export const ChatInterface: React.FC = () => {
         {messages.map((msg, index) => (
           <div key={index} className="flex flex-col">
             <div className={`flex items-start space-x-3 ${msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-green-500 text-white'
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${msg.role === 'user' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-600'
                 }`}>
                 {msg.role === 'user' ? getInitials(professionalName) : 'M'}
               </div>
-              <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${msg.role === 'user' ? 'bg-gray-100 text-gray-800' : 'text-gray-800'
+              <div className={`max-w-[85%] rounded-[1.25rem] px-5 py-3 text-sm ${msg.role === 'user' ? 'bg-green-600 text-white shadow-sm shadow-green-100' : 'bg-white border border-green-50/50 text-gray-800 shadow-sm'
                 }`}>
                 {renderContent(msg.content, index)}
               </div>
@@ -214,14 +216,14 @@ export const ChatInterface: React.FC = () => {
             {msg.role === 'assistant' && index === 0 && (
               <div className="ml-11 mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl">
                 {menuOptions.map((section) => (
-                  <div key={section.title} className="bg-gray-50 rounded-xl p-4 border border-gray-100 shadow-sm">
-                    <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3 px-1">{section.title}</h3>
+                  <div key={section.title} className="bg-white rounded-2xl p-4 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border-none">
+                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 px-1">{section.title}</h3>
                     <div className="space-y-2">
                       {section.options.map((option) => (
                         <button
                           key={option}
                           onClick={() => handleMenuClick(option)}
-                          className="w-full text-left text-sm text-gray-700 bg-white hover:bg-gray-100 px-3 py-2 rounded-lg border border-gray-200 transition-colors shadow-sm"
+                          className="w-full text-left text-sm text-gray-700 bg-gray-50/50 hover:bg-white hover:shadow-md hover:scale-[1.02] active:scale-[0.98] px-4 py-3 rounded-xl border border-transparent hover:border-blue-100 transition-all duration-200"
                         >
                           {option}
                         </button>
@@ -235,14 +237,14 @@ export const ChatInterface: React.FC = () => {
         ))}
 
         {isLoading && (
-           <div className="flex items-start space-x-3">
-             <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-xs font-bold">M</div>
-             <div className="flex space-x-1 py-3">
-               <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce"></div>
-               <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce delay-75"></div>
-               <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce delay-150"></div>
-             </div>
-           </div>
+          <div className="flex items-start space-x-3">
+            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-xs font-bold">M</div>
+            <div className="flex space-x-1.5 py-4 px-1">
+              <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce"></div>
+              <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce delay-75"></div>
+              <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce delay-150"></div>
+            </div>
+          </div>
         )}
 
         {error && (
@@ -277,7 +279,7 @@ export const ChatInterface: React.FC = () => {
             <button
               type="submit"
               disabled={!input.trim() || isLoading}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition-colors disabled:opacity-50"
+              className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all hover:shadow-lg hover:shadow-green-100 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:shadow-none disabled:scale-100"
             >
               <span>Send</span>
               <span>✈️</span>
