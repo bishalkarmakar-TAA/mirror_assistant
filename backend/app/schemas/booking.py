@@ -22,10 +22,10 @@ class BookingBase(BaseModel):
     status: BookingStatusEnum = BookingStatusEnum.SCHEDULED
     booking_note: Optional[str] = ""
 
-class BookingCreate(BookingBase):
+class CreateBookingRequest(BookingBase):
     pass
 
-class BookingUpdate(BaseModel):
+class UpdateBookingRequest(BaseModel):
     client_id: Optional[UUID] = None
     date: Optional[str] = None
     start_time: Optional[str] = None

@@ -14,7 +14,7 @@ from services.booking_service import BookingService
 from agents.intent_parser import intent_parser
 from agents.response_builder import response_builder
 from schemas.schedule import AvailabilitySlotCreate, AvailabilitySlotUpdate
-from schemas.booking import BookingCreate, BookingUpdate
+from schemas.booking import CreateBookingRequest, UpdateBookingRequest
 
 logger = logging.getLogger(__name__)
 
@@ -195,7 +195,7 @@ class WorkflowManager:
             ),
             "delete_slot": lambda slot_id, **kwargs: ScheduleService.delete_slot(db, UUID(slot_id)),
             "create_booking": lambda **kwargs: BookingService.create_booking(
-                db, BookingCreate(professional_id=professional_id, **kwargs)
+                db, CreateBookingRequest(professional_id=professional_id, **kwargs)
             ),
             "delete_booking": lambda booking_id, **kwargs: BookingService.cancel_booking(db, UUID(booking_id)),
             "get_upcoming_bookings": lambda **kwargs: BookingService.get_upcoming_bookings(db, professional_id)

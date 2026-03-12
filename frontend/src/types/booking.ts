@@ -17,7 +17,7 @@ export interface Booking {
   };
 }
 
-export interface BookingCreate {
+export interface CreateBookingRequest {
   professional_id: string;
   client_id: string;
   slot_id: string;
@@ -27,7 +27,7 @@ export interface BookingCreate {
   booking_note?: string;
 }
 
-export interface BookingUpdate {
+export interface UpdateBookingRequest {
   client_id?: string;
   date?: string;
   time?: string;

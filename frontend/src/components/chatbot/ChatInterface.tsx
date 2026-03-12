@@ -106,11 +106,11 @@ export const ChatInterface: React.FC = () => {
     return (
       <div key={key} className="grid grid-cols-1 gap-4 my-4 ml-11">
         {rows.map((row, i) => {
-          const start    = row['start'] || row['time'] || '';
-          const end      = row['end'] || '';
-          const client   = row['client'] || row['name'] || '';
-          const status   = row['status'] || '';
-          const id       = row['slot id'] || row['booking id'] || row['id'] || 'N/A';
+          const start     = row['start'] || row['time'] || '';
+          const end       = row['end'] || '';
+          const client    = row['client'] || row['name'] || '';
+          const status    = row['status'] || '';
+          const id        = row['slot id'] || row['booking id'] || row['id'] || '';
           const isBooking = !!row['booking id'] || !!row['client'];
           return (
             <div key={i} className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow duration-300 overflow-hidden max-w-sm border-none">
@@ -118,8 +118,7 @@ export const ChatInterface: React.FC = () => {
                 <div className="text-lg font-semibold text-gray-800">
                   {start}{end ? ` – ${end}` : ''}{client ? ` - Session with ${client}` : ''}
                 </div>
-                <div className="flex items-center justify-between mt-3">
-                  <div className="text-xs text-gray-400">ID: <span className="font-mono">{id}</span></div>
+                <div className="flex items-center justify-end mt-3">
                   {status && (
                     <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${status.toLowerCase() === 'available' ? 'bg-green-100 text-green-700' :
                         status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
@@ -143,7 +142,64 @@ export const ChatInterface: React.FC = () => {
     );
   };
 
+  const renderHtmlTableAsCards = (tableHtml: string, key: string) => {
+    if (typeof window === 'undefined') return renderText(tableHtml, key);
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(tableHtml, 'text/html');
+    const table = doc.querySelector('table');
+
+    if (!table) return renderText(tableHtml, key);
+
+    const allRows = Array.from(table.querySelectorAll('tr'));
+    if (allRows.length < 2) return renderText(tableHtml, key);
+
+    const headerCells = Array.from(
+      allRows[0].querySelectorAll('th,td')
+    ).map((cell) => cell.textContent?.trim() || '').filter(Boolean);
+
+    if (headerCells.length === 0) return renderText(tableHtml, key);
+
+    const dataRows = allRows.slice(1).map((row) =>
+      Array.from(row.querySelectorAll('td,th')).map(
+        (cell) => cell.textContent?.trim() || ''
+      )
+    );
+
+    if (dataRows.length === 0) return renderText(tableHtml, key);
+
+    let markdownTable = `| ${headerCells.join(' | ')} |\n`;
+    markdownTable += `| ${headerCells.map(() => '---').join(' | ')} |\n`;
+
+    dataRows.forEach((row) => {
+      const paddedRow = headerCells.map((_, i) => row[i] || '');
+      markdownTable += `| ${paddedRow.join(' | ')} |\n`;
+    });
+
+    return renderTableAsCards(markdownTable, key);
+  };
+
   const renderContent = (content: string, messageIndex: number) => {
+    if (content.includes('<table') && content.includes('</table>')) {
+      const start = content.indexOf('<table');
+      const end = content.indexOf('</table>') + '</table>'.length;
+
+      const before = content.slice(0, start);
+      const tableHtml = content.slice(start, end);
+      const after = content.slice(end);
+
+      const parts: { type: 'text' | 'table'; value: string }[] = [];
+      if (before.trim()) parts.push({ type: 'text', value: before });
+      parts.push({ type: 'table', value: tableHtml });
+      if (after.trim()) parts.push({ type: 'text', value: after });
+
+      return parts.map((part, partIndex) => {
+        const key = `msg-${messageIndex}-html-${partIndex}`;
+        if (part.type === 'table') return renderHtmlTableAsCards(part.value, key);
+        return <span key={key}>{renderText(part.value, key)}</span>;
+      });
+    }
+
     if (content.includes('|') && content.includes('---')) {
       const parts = content.split(/(\n?\|.*\|\n(?:\|.*\|\n?)*)/g);
       return parts.map((part, partIndex) => {
